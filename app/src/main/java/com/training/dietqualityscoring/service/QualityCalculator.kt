@@ -1,14 +1,24 @@
 package com.training.dietqualityscoring.service
 
-import com.training.dietqualityscoring.model.Meals
-import com.training.dietqualityscoring.model.VEGETABLES
+import com.training.dietqualityscoring.model.Day
+import com.training.dietqualityscoring.model.MealType
 
-class QualityCalculator(val meals: Meals) {
+class QualityCalculator(val day: Day) {
 
     fun calculateScore(): Int {
         var score = 0
-        for (i in 0..meals.count) {
-            score+= VEGETABLES.getBenefit(i)
+
+        day.meals.forEach {
+            score += calculateMealTypeBenefit(it.mealType, it.count)
+        }
+
+        return score
+    }
+
+    private fun calculateMealTypeBenefit(mealType: MealType, portions: Int): Int {
+        var score = 0;
+        for (i in 0 until portions) {
+            score += mealType.getBenefit(i)
         }
         return score
     }

@@ -1,57 +1,71 @@
 package com.training.dietqualityscoring
 
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.training.dietqualityscoring.model.Meals
-import com.training.dietqualityscoring.service.QualityCalculator
+import com.training.dietqualityscoring.model.Day
 import com.training.dietqualityscoring.ui.theme.DietQualityScoringTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import com.training.dietqualityscoring.model.EMPTY_MEALS
+import com.training.dietqualityscoring.service.QualityCalculator
+import java.time.LocalDate
 
 
 class MainActivity : ComponentActivity() {
-    val model = Meals(0)
-    val qualityCalculator: QualityCalculator = QualityCalculator(model)
 
+    @RequiresApi(Build.VERSION_CODES.O)
+    val day = Day(LocalDate.now(), EMPTY_MEALS)
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    val calculator = QualityCalculator(day)
+
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             DietQualityScoringTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
-                    DietQualityScore(model, qualityCalculator)
+                    DietQualityScore(day, calculator)
                 }
             }
         }
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.N)
 @Composable
-fun DietQualityScore(model: Meals, qualityCalculator: QualityCalculator) {
-    var vegetables by remember {
-        mutableStateOf(model.count)
-    }
-
+fun DietQualityScore(day: Day, calculator: QualityCalculator) {
     var score by remember {
         mutableStateOf(0)
     }
 
     Column {
         Text("Diet Quality Score", style = MaterialTheme.typography.h4)
-        Spacer(modifier = Modifier.size(10.dp))
-        Text("Today you had ${vegetables} meals")
+        Text("For day ${day.date}")
         Spacer(modifier = Modifier.size(10.dp))
         Text("Your score is ${score}")
-        OutlinedButton(onClick = {
-            vegetables++
-            score = qualityCalculator.calculateScore()
-            model.count = vegetables
-        }) {
-            Text("Vegetables")
+        Column {
+            day.meals.forEach { meal ->
+                var count by remember {
+                    mutableStateOf(meal.count)
+                }
+                OutlinedButton(onClick = {
+                    count = count + 1
+                    meal.count = meal.count + 1
+                    score = calculator.calculateScore()
+                }) {
+                    Text("${meal.mealType.name} ${count}")
+                }
+            }
         }
     }
 }
