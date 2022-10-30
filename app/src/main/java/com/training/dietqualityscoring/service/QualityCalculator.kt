@@ -3,9 +3,9 @@ package com.training.dietqualityscoring.service
 import com.training.dietqualityscoring.model.Day
 import com.training.dietqualityscoring.model.MealType
 
-class QualityCalculator(val day: Day) {
+class QualityCalculator() {
 
-    fun calculateScore(): Int {
+    fun calculateScore(day: Day): Int {
         var score = 0
 
         day.meals.forEach {
