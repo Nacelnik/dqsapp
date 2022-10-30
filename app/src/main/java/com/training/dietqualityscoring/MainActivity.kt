@@ -13,6 +13,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.room.Database
+import androidx.room.Room
+import com.training.dietqualityscoring.database.DietQualityDatabase
 import com.training.dietqualityscoring.model.Day
 import com.training.dietqualityscoring.model.EMPTY_MEALS
 import com.training.dietqualityscoring.service.DayPrinter
@@ -23,8 +26,6 @@ import java.time.LocalDate
 
 class MainActivity : ComponentActivity() {
 
-    val journal = HashMap<LocalDate, Day>();
-
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,7 +33,7 @@ class MainActivity : ComponentActivity() {
             DietQualityScoringTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
-                    DietQualityScore(journal)
+                    DietQualityScore()
                 }
             }
         }
@@ -41,21 +42,26 @@ class MainActivity : ComponentActivity() {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun DietQualityScore(journal: HashMap<LocalDate, Day>) {
+fun DietQualityScore() {
+    val context = LocalContext.current
 
+    val database = Room.databaseBuilder(context,
+        DietQualityDatabase::class.java, "dietQuality"
+        ).build()
+
+
+    val today = getToday(database)
     var day by remember {
-        mutableStateOf(Day(LocalDate.now(), EMPTY_MEALS()))
+        mutableStateOf(today)
     }
 
-    journal[day.date] = day
 
     val year = day.date.year
     val month = day.date.monthValue
     val dayOfMonth = day.date.dayOfMonth
 
-
     var date by remember {
-        mutableStateOf(day.date.toString())
+        mutableStateOf(today.date.toString())
     }
 
     var score by remember {
@@ -65,13 +71,12 @@ fun DietQualityScore(journal: HashMap<LocalDate, Day>) {
     val calculator = QualityCalculator()
     val dayPrinter = DayPrinter()
 
-    val context = LocalContext.current
     val datePicker = DatePickerDialog(context, {
             _: DatePicker, _year: Int, _month: Int, _dayOfMonth: Int ->
                 val selectedDate = LocalDate.of(_year, _month, _dayOfMonth)
                 date = selectedDate.toString()
-                day = journal.getOrDefault(selectedDate, Day(selectedDate, EMPTY_MEALS()))
-                journal[selectedDate] = day
+                database.dayDao().insertAll(day)
+                day = getDayForDate(selectedDate, database)
                 score = calculator.calculateScore(day)
     }, year, month, dayOfMonth)
 
@@ -84,9 +89,6 @@ fun DietQualityScore(journal: HashMap<LocalDate, Day>) {
 
         Column {
             day.meals.forEach { meal ->
-                var count by remember {
-                    mutableStateOf(meal.count)
-                }
                 OutlinedButton(onClick = {
                     meal.count = meal.count + 1
                     score = calculator.calculateScore(day)
@@ -99,4 +101,18 @@ fun DietQualityScore(journal: HashMap<LocalDate, Day>) {
             Text("Pick a date :${date}")
         }
     }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+private fun getToday(database: DietQualityDatabase): Day
+{
+    return getDayForDate(LocalDate.now(), database)
+}
+
+private fun getDayForDate(date: LocalDate, database: DietQualityDatabase): Day
+{
+    var day = database.dayDao().getByDate(date)
+    if (day == null)
+        day = Day(database.dayDao().getNextId(), date, EMPTY_MEALS())
+    return day
 }
