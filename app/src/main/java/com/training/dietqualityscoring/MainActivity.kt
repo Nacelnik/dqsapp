@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.training.dietqualityscoring.model.Day
 import com.training.dietqualityscoring.model.EMPTY_MEALS
+import com.training.dietqualityscoring.service.DayPrinter
 import com.training.dietqualityscoring.service.QualityCalculator
 import com.training.dietqualityscoring.ui.theme.DietQualityScoringTheme
 import java.time.LocalDate
@@ -52,7 +53,6 @@ fun DietQualityScore(journal: HashMap<LocalDate, Day>) {
     val month = day.date.monthValue
     val dayOfMonth = day.date.dayOfMonth
 
-    val context = LocalContext.current
 
     var date by remember {
         mutableStateOf(day.date.toString())
@@ -63,7 +63,9 @@ fun DietQualityScore(journal: HashMap<LocalDate, Day>) {
     }
 
     val calculator = QualityCalculator()
+    val dayPrinter = DayPrinter()
 
+    val context = LocalContext.current
     val datePicker = DatePickerDialog(context, {
             _: DatePicker, _year: Int, _month: Int, _dayOfMonth: Int ->
                 val selectedDate = LocalDate.of(_year, _month, _dayOfMonth)
@@ -75,9 +77,11 @@ fun DietQualityScore(journal: HashMap<LocalDate, Day>) {
 
     Column {
         Text("Diet Quality Score", style = MaterialTheme.typography.h4)
-        Text("For day ${date}")
+        Text(dayPrinter.printDay(day))
         Spacer(modifier = Modifier.size(10.dp))
         Text("Your score is ${score}")
+        Spacer(modifier = Modifier.size(10.dp))
+
         Column {
             day.meals.forEach { meal ->
                 var count by remember {
