@@ -13,11 +13,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.room.Database
 import androidx.room.Room
 import com.training.dietqualityscoring.database.DietQualityDatabase
 import com.training.dietqualityscoring.model.Day
-import com.training.dietqualityscoring.model.EMPTY_MEALS
+import com.training.dietqualityscoring.service.DataProcessor
 import com.training.dietqualityscoring.service.DayPrinter
 import com.training.dietqualityscoring.service.QualityCalculator
 import com.training.dietqualityscoring.ui.theme.DietQualityScoringTheme
@@ -29,11 +28,23 @@ class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val database = Room.databaseBuilder(
+            applicationContext,
+            DietQualityDatabase::class.java, "dietQuality"
+        )
+            .allowMainThreadQueries() // TODO: Get rid of this
+            .build()
+
+        val dataProcessor = DataProcessor(database)
+        val today = getToday(dataProcessor)
+
+
         setContent {
             DietQualityScoringTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
-                    DietQualityScore()
+                    DietQualityScore(dataProcessor, today)
                 }
             }
         }
@@ -42,19 +53,11 @@ class MainActivity : ComponentActivity() {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun DietQualityScore() {
-    val context = LocalContext.current
+fun DietQualityScore(dataProcessor: DataProcessor, today: Day) {
 
-    val database = Room.databaseBuilder(context,
-        DietQualityDatabase::class.java, "dietQuality"
-        ).build()
-
-
-    val today = getToday(database)
     var day by remember {
         mutableStateOf(today)
     }
-
 
     val year = day.date.year
     val month = day.date.monthValue
@@ -64,21 +67,22 @@ fun DietQualityScore() {
         mutableStateOf(today.date.toString())
     }
 
+    val calculator = QualityCalculator()
+
     var score by remember {
-        mutableStateOf(0)
+        mutableStateOf(calculator.calculateScore(day))
     }
 
-    val calculator = QualityCalculator()
     val dayPrinter = DayPrinter()
 
-    val datePicker = DatePickerDialog(context, {
+    val datePicker = DatePickerDialog(LocalContext.current, {
             _: DatePicker, _year: Int, _month: Int, _dayOfMonth: Int ->
-                val selectedDate = LocalDate.of(_year, _month, _dayOfMonth)
+                val selectedDate = LocalDate.of(_year, _month + 1, _dayOfMonth)
                 date = selectedDate.toString()
-                database.dayDao().insertAll(day)
-                day = getDayForDate(selectedDate, database)
+                dataProcessor.update(day)
+                day = getDayForDate(selectedDate, dataProcessor)
                 score = calculator.calculateScore(day)
-    }, year, month, dayOfMonth)
+    }, year, month - 1, dayOfMonth)
 
     Column {
         Text("Diet Quality Score", style = MaterialTheme.typography.h4)
@@ -100,19 +104,18 @@ fun DietQualityScore() {
         OutlinedButton(onClick = { datePicker.show() }) {
             Text("Pick a date :${date}")
         }
+        OutlinedButton(onClick = {dataProcessor.update(day)}) {
+            Text("Save today because I don't know any better")
+        }
     }
+
+}
+
+fun getDayForDate(selectedDate: LocalDate, dataProcessor: DataProcessor): Day {
+    return dataProcessor.getDayByDate(selectedDate)
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
-private fun getToday(database: DietQualityDatabase): Day
-{
-    return getDayForDate(LocalDate.now(), database)
-}
-
-private fun getDayForDate(date: LocalDate, database: DietQualityDatabase): Day
-{
-    var day = database.dayDao().getByDate(date)
-    if (day == null)
-        day = Day(database.dayDao().getNextId(), date, EMPTY_MEALS())
-    return day
+fun getToday(dataProcessor: DataProcessor): Day {
+    return dataProcessor.getDayByDate(LocalDate.now())
 }
