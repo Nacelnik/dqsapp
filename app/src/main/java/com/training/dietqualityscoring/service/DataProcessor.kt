@@ -40,14 +40,14 @@ class DataProcessor(val database: DietQualityDatabase) {
 
     private fun toDTO(day: Day): List<MealDTO> {
         val meals = ArrayList<MealDTO>();
-        day.meals.forEach{meal -> meals.add(MealDTO(0, day.date, meal.mealType.name, meal.count))}
+        day.meals.forEach{meal -> meals.add(MealDTO(0, day.date, meal.mealType.id, meal.count))}
         return meals;
     }
 
     private fun mealsFromDTO(meals: List<MealDTO>): List<Meal> {
         val processed = ArrayList<Meal>()
         meals.forEach{
-            meal -> processed.add(Meal(MealType.getMealTypeByName(meal.mealType), meal.count))
+            meal -> processed.add(Meal(MealType.getMealTypeById(meal.mealType), meal.count))
         }
         return processed
     }

@@ -8,6 +8,6 @@ import java.time.LocalDate
 data class MealDTO (
     @PrimaryKey(autoGenerate = true) val id: Int,
     val day: LocalDate,
-    val mealType: String,
+    val mealType: Int,
     val count: Int
 )

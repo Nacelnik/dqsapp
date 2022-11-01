@@ -10,7 +10,7 @@ class DayPrinter {
     private fun printMeals(day: Day): String {
         var meals = ""
         day.meals.filter { meal -> meal.count > 0 }.forEach{
-            meals = "${meals} ${it.count} portions of ${it.mealType.name}, "
+            meals = "${meals} ${it.count} portions of ${it.mealType.label}, "
         }
 
         if (meals.isBlank())
